@@ -42,15 +42,15 @@ else
 fi
 
 # 4. Check Deployment
-echo -n "Checking if Deployment 'mariadb' is using the PVC... "
+echo -n "Checking if Deployment 'maria-deployment' is using the PVC... "
 # Fetch the full JSON of the deployment and check for the claimName in the volumes section
-if kubectl get deployment mariadb -n mariadb -o json | grep -q '"claimName": "mariadb"'; then
+if kubectl get deployment maria-deployment -n mariadb -o json | grep -q '"claimName": "mariadb"'; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}FAIL - Deployment does not seem to mount PVC 'mariadb'.${NC}"
     # Optional debug output
     echo "Debug: Volumes found:"
-    kubectl get deployment mariadb -n mariadb -o jsonpath='{.spec.template.spec.volumes}' 2>/dev/null
+    kubectl get deployment maria-deployment -n mariadb -o jsonpath='{.spec.template.spec.volumes}' 2>/dev/null
     FAILURE=1
 fi
 
