@@ -56,7 +56,7 @@ fi
 
 # 5. Check Pod status
 echo -n "Checking if MariaDB pods are running... "
-POD_STATUS=$(kubectl get pods -n mariadb -l app=mariadb -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
+POD_STATUS=$(kubectl get pods -n mariadb -l app=maria-deployment -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
 if [ "$POD_STATUS" == "Running" ]; then
     echo -e "${GREEN}OK${NC}"
 else
