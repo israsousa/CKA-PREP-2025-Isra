@@ -11,6 +11,16 @@ PATH_PREFIX="/echo"
 PORT=8080
 NODEPORT=30080
 
+echo "==> Detecting IngressClass..."
+ING_CLASS=$(kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+
+if [ -z "${ING_CLASS:-}" ]; then
+  echo "⚠️  No IngressClass found in cluster!"
+  echo "    This lab requires an Ingress Controller."
+else
+  echo "✔ Found IngressClass: ${ING_CLASS}"
+fi
+
 echo "==> Creating namespace..."
 kubectl get ns "$NS" >/dev/null 2>&1 || kubectl create ns "$NS"
 
@@ -65,8 +75,19 @@ echo "==> Waiting for deployment rollout..."
 kubectl -n "$NS" rollout status deploy/"$DEPLOY"
 
 echo
+echo "========================================================"
 echo "✅ Prep done."
+echo
+echo "IMPORTANT (Killer.sh environments):"
+if [ -n "${ING_CLASS:-}" ]; then
+  echo "  👉 Your Ingress MUST include:"
+  echo "     ingressClassName: ${ING_CLASS}"
+else
+  echo "  👉 No IngressClass detected — controller may be missing."
+fi
+echo
 echo "Solve by creating Ingress '${ING}' in namespace '${NS}'"
 echo "Host: ${HOST}"
 echo "Path: ${PATH_PREFIX}"
 echo "Backend: service ${SVC}:${PORT}"
+echo "========================================================"
