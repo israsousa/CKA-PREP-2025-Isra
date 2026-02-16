@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# prep.sh — Ingress Resource Lab Prep (creates ONLY the starting state)
+# prep.sh — Ingress Resource Lab Prep (creates starting state + installs ingress controller)
 set -euo pipefail
 
 NS="echo-sound"
@@ -11,16 +11,31 @@ PATH_PREFIX="/echo"
 PORT=8080
 NODEPORT=30080
 
-echo "==> Detecting IngressClass..."
-ING_CLASS=$(kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+echo "========================================================"
+echo "==> Checking for existing Ingress Controller..."
+echo "========================================================"
 
-if [ -z "${ING_CLASS:-}" ]; then
-  echo "⚠️  No IngressClass found in cluster!"
-  echo "    This lab requires an Ingress Controller."
+if kubectl get ns ingress-nginx >/dev/null 2>&1; then
+  echo "✔ ingress-nginx namespace already exists."
 else
-  echo "✔ Found IngressClass: ${ING_CLASS}"
+  echo "==> Installing NGINX Ingress Controller..."
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.14.3/deploy/static/provider/cloud/deploy.yaml
 fi
 
+echo "==> Waiting for ingress controller to be ready..."
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=180s
+
+echo "✔ Ingress Controller ready."
+
+echo "==> Detecting IngressClass..."
+ING_CLASS=$(kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}')
+
+echo "✔ Using IngressClass: ${ING_CLASS}"
+
+echo "========================================================"
 echo "==> Creating namespace..."
 kubectl get ns "$NS" >/dev/null 2>&1 || kubectl create ns "$NS"
 
@@ -30,7 +45,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ${DEPLOY}
-  namespace: ${NS}
 spec:
   replicas: 2
   selector:
@@ -56,7 +70,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ${SVC}
-  namespace: ${NS}
 spec:
   type: NodePort
   selector:
@@ -78,13 +91,8 @@ echo
 echo "========================================================"
 echo "✅ Prep done."
 echo
-echo "IMPORTANT (Killer.sh environments):"
-if [ -n "${ING_CLASS:-}" ]; then
-  echo "  👉 Your Ingress MUST include:"
-  echo "     ingressClassName: ${ING_CLASS}"
-else
-  echo "  👉 No IngressClass detected — controller may be missing."
-fi
+echo "Your Ingress MUST include:"
+echo "  ingressClassName: ${ING_CLASS}"
 echo
 echo "Solve by creating Ingress '${ING}' in namespace '${NS}'"
 echo "Host: ${HOST}"
