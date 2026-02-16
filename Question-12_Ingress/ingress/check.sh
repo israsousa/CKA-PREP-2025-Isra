@@ -60,4 +60,4 @@ BACKEND_SVC="$(kubectl -n "$NS" get ingress "$ING" -o jsonpath='{.spec.rules[?(@
 BACKEND_PORT="$(kubectl -n "$NS" get ingress "$ING" -o jsonpath='{.spec.rules[?(@.host=="'"$HOST"'")].http.paths[?(@.path=="'"$PATH_PREFIX"'")].backend.service.port.number}')"
 [[ "$BACKEND_PORT" == "$PORT" ]] || fail "Backend port must be $PORT (found: $BACKEND_PORT)"
 
-pass "Ingress spec is correctly configured (Exam-style validation)."
+pass "Ingress spec is correctly configured (Exam-style validation). - During the Exame you should test CURL 'curl -o /dev/null -s -w ""%{http_code}\n http://example.org/echo' - Expected HTTP 200 from http://example.org/echo"
