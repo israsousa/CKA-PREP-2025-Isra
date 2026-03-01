@@ -1,36 +1,10 @@
-# Question – CRDs (cert-manager)
+# Question HPA
+# Create a new HorizontalPodAutoScaler(HPA) named apache-server in the autoscale namespace
 
-cert-manager is installed in the cluster.
+# Task
+# 1. The HPA must target the existing deployment called apache-deployment in the autoscale namespace
+# 2. Set the HPA to target for 50% CPU usage per Pod
+# 3. Configure the HPA to have a minimum of 1 pod and a maximum of 4 pods
+# 4. Set the downscale stabilization window to 30 seconds
 
-## Tasks
-
-1. Create a list of all **cert-manager** CustomResourceDefinitions (CRDs) and save the output to:
-
-   `~/resources.yaml`
-
-   Use `kubectl` to list CRDs and keep the default output formatting supported by `kubectl`.
-
-2. Using `kubectl`, extract the documentation for the **subject** specification field of the **Certificate** Custom Resource and save the output to:
-
-   `~/subject.yaml`
-
-   You may use any output format that `kubectl` supports.
-
----
-
-## Solution
-
-### Task 1
-
-```bash
-kubectl get crd | grep cert-manager > ~/resources.yaml
-```
-
-````
-
-### Task 2
-
-```bash
-kubectl explain certificate.spec.subject --recursive > ~/subject.yaml
-```
-````
+# Video Link - https://youtu.be/YGkARVFKtmM

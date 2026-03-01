@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # check.sh — StorageClass (Default) Validator (PASS/FAIL)
+
 set -euo pipefail
 
 SC_NEW="local-codegenitor"
@@ -24,15 +25,15 @@ prov="$(kubectl get sc "${SC_NEW}" -o jsonpath='{.provisioner}')"
 binding="$(kubectl get sc "${SC_NEW}" -o jsonpath='{.volumeBindingMode}')"
 [[ "$binding" == "$REQ_BINDING" ]] || fail "'${SC_NEW}' volumeBindingMode is '$binding' (expected '${REQ_BINDING}')"
 
-# --- Default annotation checks (robust jsonpath for dotted key) ---
-new_default="$(kubectl get sc "${SC_NEW}" -o jsonpath='{.metadata.annotations["storageclass.kubernetes.io/is-default-class"]}')"
-[[ "$new_default" == "true" ]] || fail "StorageClass '${SC_NEW}' is not marked as default (annotation storageclass.kubernetes.io/is-default-class=true missing)"
+# --- Default annotation checks (escaped dots for kubectl jsonpath) ---
+new_default="$(kubectl get sc "${SC_NEW}" -o jsonpath='{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}')"
+[[ "$new_default" == "true" ]] || fail "StorageClass '${SC_NEW}' is not marked as default"
 
-old_default="$(kubectl get sc "${SC_OLD}" -o jsonpath='{.metadata.annotations["storageclass.kubernetes.io/is-default-class"]}' 2>/dev/null || true)"
+old_default="$(kubectl get sc "${SC_OLD}" -o jsonpath='{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}' 2>/dev/null || true)"
 [[ "$old_default" != "true" ]] || fail "StorageClass '${SC_OLD}' is still default. Remove default annotation from it."
 
 # --- Ensure ONLY ONE default exists ---
-defaults="$(kubectl get sc -o jsonpath='{range .items[*]}{.metadata.name}{"="}{.metadata.annotations["storageclass.kubernetes.io/is-default-class"]}{"\n"}{end}' \
+defaults="$(kubectl get sc -o jsonpath='{range .items[*]}{.metadata.name}{"="}{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}{"\n"}{end}' \
   | awk -F= '$2=="true"{print $1}')"
 
 count="$(echo "$defaults" | awk 'NF{c++} END{print c+0}')"

@@ -18,10 +18,3 @@ spec:
       containers:
       - name: mariadb
         image: mariadb:10.5
-        volumeMounts:
-        - name: mariadb-storage
-          mountPath: /var/lib/mysql
-      volumes:
-      - name: mariadb-storage
-        persistentVolumeClaim:
-          claimName: mariadb
