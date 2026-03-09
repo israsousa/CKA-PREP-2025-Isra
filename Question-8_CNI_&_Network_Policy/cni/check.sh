@@ -18,19 +18,19 @@ kubectl -n "$NS" get pod client-denied >/dev/null 2>&1 || fail "Pod client-denie
 
 CNI_OK=0
 
-if kubectl -n kube-system get ds 2>/dev/null | grep -qiE 'kube-flannel|flannel'; then
+if kubectl get ds -A 2>/dev/null | grep -qiE 'kube-flannel|flannel'; then
   CNI_OK=1
 fi
 
-if kubectl -n kube-system get ds 2>/dev/null | grep -qiE 'calico|canal'; then
+if kubectl get ds -A 2>/dev/null | grep -qiE 'calico|canal'; then
   CNI_OK=1
 fi
 
-if kubectl -n kube-system get pods 2>/dev/null | grep -qiE 'calico|tigera|canal|flannel'; then
+if kubectl get pods -A 2>/dev/null | grep -qiE 'calico|tigera|canal|flannel'; then
   CNI_OK=1
 fi
 
-[[ "$CNI_OK" -eq 1 ]] || fail "No CNI pods/daemonsets detected in kube-system (expected Flannel or Calico-family)"
+[[ "$CNI_OK" -eq 1 ]] || fail "No CNI pods detected (expected Flannel or Calico)"
 
 echo "==> Applying NetworkPolicy test (deny by default, allow only access=granted)"
 kubectl -n "$NS" apply -f - <<'EOF'
@@ -51,13 +51,13 @@ spec:
               access: granted
 EOF
 
-echo "==> Waiting a moment for policy to take effect"
-sleep 3
+echo "==> Waiting for policy to take effect"
+sleep 5
 
 echo "==> Test: allowed client should reach echo-svc"
 kubectl -n "$NS" exec client-allowed -- sh -c "wget -qO- --timeout=3 http://${SVC}:80 >/dev/null"
 RC_ALLOWED=$?
-[[ "$RC_ALLOWED" -eq 0 ]] || fail "allowed client could NOT reach ${SVC} (basic connectivity or DNS issue)"
+[[ "$RC_ALLOWED" -eq 0 ]] || fail "allowed client could NOT reach ${SVC}"
 
 echo "==> Test: denied client should NOT reach echo-svc"
 set +e
@@ -65,6 +65,6 @@ kubectl -n "$NS" exec client-denied -- sh -c "wget -qO- --timeout=3 http://${SVC
 RC_DENIED=$?
 set -e
 
-[[ "$RC_DENIED" -ne 0 ]] || fail "denied client CAN reach ${SVC} (NetworkPolicy not enforced by CNI)"
+[[ "$RC_DENIED" -ne 0 ]] || fail "denied client CAN reach ${SVC}"
 
-pass "CNI detected + NetworkPolicy enforcement works (allowed succeeds, denied blocked)."
+pass "CNI detected + NetworkPolicy enforcement works."
