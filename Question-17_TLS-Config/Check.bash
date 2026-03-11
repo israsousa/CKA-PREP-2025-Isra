@@ -31,7 +31,7 @@ fi
 echo "Checking TLS handshake..."
 # Note: We can't guarantee curl behavior in this script without running against the live cluster if the pods aren't up
 # But we can try checking if the service is up
-SVC_IP=$(kubectl get svc nginx-service -n nginx-static -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
+SVC_IP=$(kubectl get svc nginx-static -n nginx-static -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
 if [ -z "$SVC_IP" ]; then
     echo -e "${RED}FAIL - Service IP not found.${NC}"
     FAILURE=1
