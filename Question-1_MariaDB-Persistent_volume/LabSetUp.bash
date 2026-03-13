@@ -43,24 +43,24 @@ cat <<EOF > ~/mariadb-deploy.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mariadb
+  name: maria-deployment
   namespace: mariadb
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mariadb
+      app: maria-deployment
   template:
     metadata:
       labels:
-        app: mariadb
+        app: maria-deployment
     spec:
       containers:
       - name: mariadb
         image: mariadb:10.6
         env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: rootpass
+        - name: MARIADB_ROOT_PASSWORD
+          value: mysecretpassword
         volumeMounts:
         - name: mariadb-storage
           mountPath: /var/lib/mysql
@@ -90,31 +90,23 @@ cat <<'EOF' > ~/mariadb-deploy.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mariadb
+  name: maria-deployment
   namespace: mariadb
+  labels:
+    app: maria-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mariadb
+      app: maria-deployment
   template:
     metadata:
       labels:
-        app: mariadb
+        app: maria-deployment
     spec:
       containers:
       - name: mariadb
         image: mariadb:10.6
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: rootpass
-        volumeMounts:
-        - name: mariadb-storage
-          mountPath: /var/lib/mysql
-      volumes:
-      - name: mariadb-storage
-        persistentVolumeClaim:
-          claimName: ""
 EOF
 
 echo "✅ Lab setup complete!"
