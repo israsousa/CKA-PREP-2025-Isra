@@ -1,68 +1,91 @@
 #!/bin/bash
 
-# Question 1: MariaDB Persistent Volume Check
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
+
 FAILURE=0
 
-echo "Starting validation for Question 1 - MariaDB Persistent Volume..."
+echo "Starting validation for MariaDB Persistent Volume Lab..."
+echo ""
 
-# 1. Check PVC 'mariadb' in 'mariadb' namespace
-echo -n "Checking if PVC 'mariadb' exists in namespace 'mariadb'... "
-if kubectl get pvc mariadb -n mariadb > /dev/null 2>&1; then
+echo -n "Checking PVC 'mariadb' exists... "
+
+if kubectl get pvc mariadb -n mariadb >/dev/null 2>&1; then
     echo -e "${GREEN}OK${NC}"
 else
-    echo -e "${RED}FAIL - PVC 'mariadb' not found in namespace 'mariadb'.${NC}"
+    echo -e "${RED}FAIL - PVC not found${NC}"
     FAILURE=1
 fi
 
-# 2. Check PVC capacity and access modes
-if [ $FAILURE -eq 0 ]; then
-    echo -n "Checking PVC specs (250Mi, ReadWriteOnce)... "
-    STORAGE=$(kubectl get pvc mariadb -n mariadb -o jsonpath='{.spec.resources.requests.storage}')
-    ACCESS=$(kubectl get pvc mariadb -n mariadb -o jsonpath='{.spec.accessModes[0]}')
-    
-    if [ "$STORAGE" == "250Mi" ] && [ "$ACCESS" == "ReadWriteOnce" ]; then
-        echo -e "${GREEN}OK${NC}"
-    else
-        echo -e "${RED}FAIL - Expected 250Mi/ReadWriteOnce, got ${STORAGE}/${ACCESS}.${NC}"
-        FAILURE=1
-    fi
+echo -n "Checking PVC specs (250Mi / ReadWriteOnce)... "
+
+STORAGE=$(kubectl get pvc mariadb -n mariadb -o jsonpath='{.spec.resources.requests.storage}' 2>/dev/null)
+ACCESS=$(kubectl get pvc mariadb -n mariadb -o jsonpath='{.spec.accessModes[0]}' 2>/dev/null)
+
+if [[ "$STORAGE" == "250Mi" && "$ACCESS" == "ReadWriteOnce" ]]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAIL - Expected 250Mi/RWO but got ${STORAGE}/${ACCESS}${NC}"
+    FAILURE=1
 fi
 
-# 3. Check if PVC is Bound
-echo -n "Checking if PVC is Bound... "
+echo -n "Checking PVC status... "
+
 STATUS=$(kubectl get pvc mariadb -n mariadb -o jsonpath='{.status.phase}' 2>/dev/null)
-if [ "$STATUS" == "Bound" ]; then
+
+if [[ "$STATUS" == "Bound" ]]; then
     echo -e "${GREEN}OK${NC}"
 else
-    echo -e "${RED}FAIL - PVC status is ${STATUS} (expected Bound).${NC}"
+    echo -e "${RED}FAIL - PVC not Bound${NC}"
     FAILURE=1
 fi
 
-# 4. Check Deployment
-echo -n "Checking if Deployment 'maria-deployment' is using the PVC... "
-# Fetch the full JSON of the deployment and check for the claimName in the volumes section
+echo -n "Checking PV reuse... "
+
+PV_NAME=$(kubectl get pvc mariadb -n mariadb -o jsonpath='{.spec.volumeName}' 2>/dev/null)
+
+if [[ "$PV_NAME" == "mariadb-pv" ]]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAIL - PVC not bound to expected PV${NC}"
+    FAILURE=1
+fi
+
+echo -n "Checking Deployment exists... "
+
+if kubectl get deployment maria-deployment -n mariadb >/dev/null 2>&1; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAIL - Deployment not found${NC}"
+    FAILURE=1
+fi
+
+echo -n "Checking Deployment uses PVC... "
+
 if kubectl get deployment maria-deployment -n mariadb -o json | grep -q '"claimName": "mariadb"'; then
     echo -e "${GREEN}OK${NC}"
 else
-    echo -e "${RED}FAIL - Deployment does not seem to mount PVC 'mariadb'.${NC}"
-    # Optional debug output
-    echo "Debug: Volumes found:"
-    kubectl get deployment maria-deployment -n mariadb -o jsonpath='{.spec.template.spec.volumes}' 2>/dev/null
+    echo -e "${RED}FAIL - Deployment does not mount PVC${NC}"
     FAILURE=1
 fi
 
-# 5. Check Pod status
-echo -n "Checking if MariaDB pods are running... "
+echo -n "Checking Pod status... "
+
 POD_STATUS=$(kubectl get pods -n mariadb -l app=maria-deployment -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
-if [ "$POD_STATUS" == "Running" ]; then
+
+if [[ "$POD_STATUS" == "Running" ]]; then
     echo -e "${GREEN}OK${NC}"
 else
-    echo -e "${RED}FAIL - Pod status is ${POD_STATUS}.${NC}"
+    echo -e "${RED}FAIL - Pod not running${NC}"
     FAILURE=1
 fi
 
-echo "--------------------------------------------"
-if [ $FAILURE -eq 0 ]; then echo -e "${GREEN}SUCCESS!${NC}"; else echo -e "${RED}FAILURE!${NC}"; fi
+echo ""
+echo "---------------------------------------"
+
+if [[ $FAILURE -eq 0 ]]; then
+    echo -e "${GREEN}SUCCESS! All checks passed.${NC}"
+else
+    echo -e "${RED}FAILURE! Some checks failed.${NC}"
+fi

@@ -11,14 +11,14 @@ kind: PersistentVolume
 metadata:
   name: mariadb-pv
   labels:
-    app: mariadb
+    app: maria-deployment
 spec:
   capacity:
     storage: 250Mi
   accessModes:
-    - ReadWriteOnce
+  - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: standard  # Use default storage class so PVC without storageClassName binds
+  storageClassName: standard
   hostPath:
     path: /mnt/data/mariadb
 EOF
@@ -32,19 +32,22 @@ metadata:
   namespace: mariadb
 spec:
   accessModes:
-    - ReadWriteOnce
+  - ReadWriteOnce
   resources:
     requests:
       storage: 250Mi
 EOF
 
 echo "🔹 Creating initial MariaDB Deployment..."
+
 cat <<EOF > ~/mariadb-deploy.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: maria-deployment
   namespace: mariadb
+  labels:
+    app: maria-deployment
 spec:
   replicas: 1
   selector:
@@ -72,20 +75,24 @@ EOF
 
 kubectl apply -f ~/mariadb-deploy.yaml
 
-echo "🔹 Waiting for MariaDB pod to start..."
-kubectl wait --for=condition=Available deployment/mariadb -n mariadb --timeout=60s || true
+echo "🔹 Waiting for MariaDB pod..."
+kubectl wait --for=condition=Available deployment/maria-deployment -n mariadb --timeout=60s
 
-echo "🔹 Simulating accidental deletion of Deployment and PVC..."
-kubectl delete deployment mariadb -n mariadb --ignore-not-found
-kubectl delete pvc mariadb -n mariadb --ignore-not-found
+echo "🔹 Simulating accidental deletion..."
 
-echo "🔹 Resetting PV for reuse (clearing any stale claimRef)..."
+kubectl delete deployment maria-deployment -n mariadb
+kubectl delete pvc mariadb -n mariadb
+
+echo "🔹 Resetting PV for reuse..."
+
 claim_ref=$(kubectl get pv mariadb-pv -o jsonpath='{.spec.claimRef.name}' 2>/dev/null || true)
+
 if [ -n "$claim_ref" ]; then
   kubectl patch pv mariadb-pv --type=json -p '[{"op":"remove","path":"/spec/claimRef"}]'
 fi
 
-# Refresh the deployment manifest for practice: claimName intentionally left blank
+echo "🔹 Preparing deployment file for the student..."
+
 cat <<'EOF' > ~/mariadb-deploy.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -109,7 +116,11 @@ spec:
         image: mariadb:10.6
 EOF
 
+echo ""
 echo "✅ Lab setup complete!"
-echo "   - PV retained and ready for reuse"
-echo "   - Namespace: mariadb"
-echo "   - Task: recreate PVC and deployment reusing existing PV (fill claimName in ~/mariadb-deploy.yaml)"
+echo ""
+echo "Tasks:"
+echo "1️⃣ Create PVC 'mariadb' in namespace 'mariadb'"
+echo "2️⃣ Edit ~/mariadb-deploy.yaml to mount the PVC"
+echo "3️⃣ Apply the deployment"
+echo ""
