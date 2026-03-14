@@ -44,11 +44,6 @@ spec:
       containers:
         - name: mariadb
           image: mariadb:10.6
-          env:
-            - name: MYSQL_ROOT_PASSWORD
-              value: password
-          ports:
-            - containerPort: 3306
 EOF
 
 echo "==> Applying initial Deployment (no PVC yet)..."
